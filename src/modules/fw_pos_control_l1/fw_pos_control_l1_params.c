@@ -270,12 +270,11 @@ PARAM_DEFINE_FLOAT(FW_THR_TRIM, 0.6f);
 PARAM_DEFINE_FLOAT(FW_THR_TRIM_MAX, -1.0f);
 
 /**
- * Scale throttle by pressure change
+ * Throttle air density scale
  *
- * Automatically adjust throttle to account for decreased air density at higher altitudes.
- * Start with a scale factor of 1.0 and adjust for different propulsion systems.
- *
- * When flying without airspeed sensor this will help to keep a constant performance over large altitude ranges.
+ * This scale can be used to fine tune the throttle compensation based on air density.
+ * E.g. throttle_compensated = throttle * eas2tas * FW_THR_ALT_SCL
+ * where eas2tas is the conversion factor from equivalent to true airspeed (calculated using estimated air density)
  *
  * The default value of 0 will disable scaling.
  *

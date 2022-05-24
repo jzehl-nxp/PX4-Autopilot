@@ -95,7 +95,7 @@ public:
 	float get_throttle_setpoint() { return _last_throttle_setpoint; }
 	float get_pitch_setpoint() { return _last_pitch_setpoint; }
 	float get_speed_weight() { return _pitch_speed_weight; }
-	float get_throttle_trim_applied() { return _throttle_trim_applied; }
+	float get_throttle_trim_mapped() { return _throttle_trim_mapped; }
 
 	float get_load_factor() { return _load_factor;}
 	float get_weight_ratio() { return _weight_ratio; }
@@ -144,6 +144,9 @@ public:
 	void set_speed_derivative_time_constant(float time_const) { _speed_derivative_time_const = time_const; }
 
 	void set_seb_rate_ff_gain(float ff_gain) { _SEB_rate_ff = ff_gain; }
+
+	void setAirDensity(float air_density) { _air_density = air_density; }
+	void setAirDensityThrottleCompensationScale(float scale) { _air_density_throttle_compensation_scale = scale; }
 
 
 	// TECS status
@@ -281,7 +284,7 @@ private:
 	float _throttle_trim_min{0.0f};
 	float _throttle_trim{0.0f};					///< feedforward throttle applied when controller error is zero, is provided externally and can change in flight
 	float _throttle_trim_max{0.0f};
-	float _throttle_trim_applied{0.0f};
+	float _throttle_trim_mapped{0.0f};
 	float _pitch_setpoint_max{0.5f};				///< pitch demand upper limit (rad)
 	float _pitch_setpoint_min{-0.5f};				///< pitch demand lower limit (rad)
 
@@ -318,6 +321,9 @@ private:
 	bool _airspeed_enabled{false};					///< true when airspeed use has been enabled
 	bool _states_initialized{false};					///< true when TECS states have been iniitalized
 	bool _in_air{false};						///< true when the vehicle is flying
+
+	float _air_density{NAN};
+	float _air_density_throttle_compensation_scale{0.0f};
 
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
@@ -360,7 +366,9 @@ private:
 	 */
 	void _update_pitch_setpoint();
 
-	void _updateAppliedTrimThrottle(float EAS_setpoint, float eas_to_tas);
+	void _mapAirspeedSetpointToTrimThrottle(float EAS_setpoint);
+
+	void _compensateThrottleParamsForAirDensity();
 
 	void _updateTrajectoryGenerationConstraints();
 

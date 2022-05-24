@@ -272,9 +272,6 @@ void TECS::_update_throttle_setpoint()
 		// The additional normal load factor is given by (1/cos(bank angle) - 1)
 		_STE_rate_setpoint += _load_factor_correction * (_load_factor - 1.f);
 
-		// Adjust the demanded total energy rate to compensate for vehicle weight relative to nominal weight
-		_STE_rate_setpoint += _load_factor_correction * (_weight_ratio - 1.f);
-
 		_STE_rate_setpoint = constrain(_STE_rate_setpoint, _STE_rate_min, _STE_rate_max);
 
 		// Calculate a predicted throttle from the demanded rate of change of energy, using the trim throttle
@@ -286,13 +283,13 @@ void TECS::_update_throttle_setpoint()
 
 		if (_STE_rate_setpoint >= 0) {
 			// throttle is between trim and maximum
-			throttle_predicted = _throttle_trim_applied + _STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max -
-					     _throttle_trim_applied);
+			throttle_predicted = _throttle_trim_mapped + _STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max -
+					     _throttle_trim_mapped);
 
 		} else {
 			// throttle is between trim and minimum
-			throttle_predicted = _throttle_trim_applied + _STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min -
-					     _throttle_trim_applied);
+			throttle_predicted = _throttle_trim_mapped + _STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min -
+					     _throttle_trim_mapped);
 
 		}
 
@@ -450,7 +447,30 @@ void TECS::_update_pitch_setpoint()
 					 _last_pitch_setpoint + ptchRateIncr);
 }
 
-void TECS::_updateAppliedTrimThrottle(float EAS_setpoint, float eas_to_tas)
+void TECS::_compensateThrottleParamsForAirDensity()
+{
+	if (PX4_ISFINITE(_air_density) && _air_density_throttle_compensation_scale > FLT_EPSILON) {
+		// scale throttle as a function of sqrt(rho0/rho)
+		const float eas2tas = sqrtf(CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C / _air_density);
+		const float scale = constrain(eas2tas * _air_density_throttle_compensation_scale, 1.f, 2.f);
+
+		// increase maximum throttle in order for the vehicle to achieve it's maximum energy rate
+		_throttle_setpoint_max = constrain(_throttle_setpoint_max * scale, _throttle_setpoint_min, 1.0f);
+
+		// increase throttle trim and the throttle trim limits
+		if (PX4_ISFINITE(_throttle_trim_min)) {
+			_throttle_trim_min = constrain(_throttle_trim_min * scale, _throttle_setpoint_min, _throttle_setpoint_max);
+		}
+
+		if (PX4_ISFINITE(_throttle_trim_max)) {
+			_throttle_trim_max = constrain(_throttle_trim_max * scale, _throttle_setpoint_min, _throttle_setpoint_max);
+		}
+
+		_throttle_trim = constrain(_throttle_trim * scale, _throttle_setpoint_min, _throttle_setpoint_max);
+	}
+}
+
+void TECS::_mapAirspeedSetpointToTrimThrottle(float EAS_setpoint)
 {
 	EAS_setpoint = math::constrain(EAS_setpoint, _equivalent_airspeed_min, _equivalent_airspeed_max);
 
@@ -469,7 +489,7 @@ void TECS::_updateAppliedTrimThrottle(float EAS_setpoint, float eas_to_tas)
 						airspeed_delta, FLT_EPSILON);
 	}
 
-	_throttle_trim_applied = math::constrain(throttle_trim_applied, _throttle_trim_min, _throttle_trim_max);
+	_throttle_trim_mapped = math::constrain(throttle_trim_applied, _throttle_trim_min, _throttle_trim_max);
 }
 
 void TECS::_updateTrajectoryGenerationConstraints()
@@ -612,7 +632,9 @@ void TECS::update_pitch_throttle(float pitch, float baro_altitude, float hgt_set
 		return;
 	}
 
-	_updateAppliedTrimThrottle(EAS_setpoint, eas_to_tas);
+	_compensateThrottleParamsForAirDensity();
+
+	_mapAirspeedSetpointToTrimThrottle(EAS_setpoint);
 
 	_updateTrajectoryGenerationConstraints();
 

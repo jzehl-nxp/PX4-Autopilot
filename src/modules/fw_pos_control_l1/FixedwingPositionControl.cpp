@@ -143,14 +143,7 @@ FixedwingPositionControl::parameters_update()
 	_tecs.set_ste_rate_time_const(_param_ste_rate_time_const.get());
 	_tecs.set_speed_derivative_time_constant(_param_tas_rate_time_const.get());
 	_tecs.set_seb_rate_ff_gain(_param_seb_rate_ff.get());
-
-	float weight_ratio = 1.0f;
-	if (_param_weight_base.get() > 0 && _param_weight_gross.get() > 0) {
-		weight_ratio = math::constrain(_param_weight_gross.get() / _param_weight_base.get(), 0.5f, 1.5f);
-	}
-
-	_tecs.set_weight_ratio(weight_ratio);
-
+	_tecs.setAirDensityThrottleCompensationScale(_param_fw_thr_alt_scl.get());
 
 	// Landing slope
 	/* check if negative value for 2/3 of flare altitude is set for throttle cut */
@@ -391,7 +384,7 @@ FixedwingPositionControl::vehicle_attitude_poll()
 		_body_velocity = R.transpose() * Vector3f{_local_pos.vx, _local_pos.vy, _local_pos.vz};
 
 		// load factor due to banking
-		float load_factor = 1.f / cosf(euler_angles(0));
+		const float load_factor = 1.f / cosf(euler_angles(0));
 		_tecs.set_load_factor(load_factor);
 	}
 }
@@ -452,11 +445,21 @@ FixedwingPositionControl::get_auto_airspeed_setpoint(const hrt_abstime &now, con
 
 	float airspeed_min_adjusted = _param_fw_airspd_min.get();
 
+	float load_factor = 1.0f;
+
+	if (PX4_ISFINITE(_att_sp.roll_body)) {
+		load_factor = 1.0f / sqrtf(cosf(_att_sp.roll_body));
+	}
+
+	float weight_ratio = 1.0f;
+
+	if (_param_weight_base.get() > FLT_EPSILON && _param_weight_gross.get() > FLT_EPSILON) {
+		weight_ratio = math::constrain(_param_weight_gross.get() / _param_weight_base.get(), 0.5f, 2.0f);
+	}
 
 	// Stall speed increases with the square root of the load factor times the weight ratio
 	// Vs ~ sqrt(load_factor * weight_ratio)
-	airspeed_min_adjusted = constrain(_param_fw_airspd_stall.get() * sqrtf(_tecs.get_load_factor() *
-					  _tecs.get_weight_ratio()),
+	airspeed_min_adjusted = constrain(_param_fw_airspd_stall.get() * sqrtf(load_factor * weight_ratio),
 					  airspeed_min_adjusted, _param_fw_airspd_max.get());
 
 	// constrain setpoint
@@ -536,7 +539,7 @@ FixedwingPositionControl::tecs_status_publish()
 
 	t.throttle_sp = _tecs.get_throttle_setpoint();
 	t.pitch_sp_rad = _tecs.get_pitch_setpoint();
-	t.throttle_trim = _tecs.get_throttle_trim_applied();
+	t.throttle_trim = _tecs.get_throttle_trim_mapped();
 
 	t.timestamp = hrt_absolute_time();
 
@@ -2432,6 +2435,12 @@ FixedwingPositionControl::Run()
 		vehicle_control_mode_poll();
 		wind_poll();
 
+		vehicle_air_data_s air_data;
+
+		if (_vehicle_air_data_sub.update(&air_data)) {
+			_tecs.setAirDensity(air_data.rho);
+		}
+
 		if (_vehicle_land_detected_sub.updated()) {
 			vehicle_land_detected_s vehicle_land_detected;
 
@@ -2695,33 +2704,6 @@ FixedwingPositionControl::tecs_update_pitch_throttle(const hrt_abstime &now, flo
 
 	float throttle_trim_min = _param_fw_thr_trim_min.get() >= 0.0f ? _param_fw_thr_trim_min.get() : NAN;
 	float throttle_trim_max = _param_fw_thr_trim_max.get() >= 0.0f ? _param_fw_thr_trim_max.get() : NAN;
-
-	/* scale throttle cruise by baro pressure */
-	if (_param_fw_thr_alt_scl.get() > FLT_EPSILON) {
-		vehicle_air_data_s air_data;
-
-		if (_vehicle_air_data_sub.copy(&air_data)) {
-			if (PX4_ISFINITE(air_data.rho)) {
-				// scale throttle as a function of sqrt(rho0/rho)
-				const float eas2tas = sqrtf(CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C / air_data.rho);
-				const float scale = constrain(eas2tas * _param_fw_thr_alt_scl.get(), 1.f, 2.f);
-
-				// increase maximum throttle in order for the vehicle to achieve it's maximum energy rate
-				throttle_max = constrain(throttle_max * scale, throttle_min, 1.0f);
-
-				// increase throttle trim and the throttle trim limits
-				if (PX4_ISFINITE(throttle_trim_min)) {
-					throttle_trim_min = constrain(throttle_trim_min * scale, throttle_min, throttle_max);
-				}
-
-				if (PX4_ISFINITE(throttle_trim_max)) {
-					throttle_trim_max = constrain(throttle_trim_max * scale, throttle_min, throttle_max);
-				}
-
-				throttle_trim = constrain(throttle_trim * scale, throttle_min, throttle_max);
-			}
-		}
-	}
 
 	_tecs.update_pitch_throttle(_pitch - radians(_param_fw_psp_off.get()),
 				    _current_altitude, alt_sp,
