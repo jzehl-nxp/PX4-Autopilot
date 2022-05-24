@@ -533,6 +533,7 @@ FixedwingPositionControl::tecs_status_publish()
 
 	t.throttle_sp = _tecs.get_throttle_setpoint();
 	t.pitch_sp_rad = _tecs.get_pitch_setpoint();
+	t.throttle_trim = _tecs.get_throttle_trim_applied();
 
 	t.timestamp = hrt_absolute_time();
 

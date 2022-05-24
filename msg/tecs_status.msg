@@ -40,5 +40,6 @@ float32 pitch_integ
 
 float32 throttle_sp
 float32 pitch_sp_rad
+float32 throttle_trim	# throttle value [0,1] required to fly level at equivalent_airspeed_sp
 
 uint8 mode
