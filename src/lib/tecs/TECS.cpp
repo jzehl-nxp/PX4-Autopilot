@@ -116,9 +116,9 @@ void TECS::_update_speed_states(float equivalent_airspeed_setpoint, float equiva
 	_TAS_max   = _equivalent_airspeed_max * EAS2TAS;
 	_TAS_min   = _equivalent_airspeed_min * EAS2TAS;
 
-	// If airspeed measurements are not being used, fix the airspeed estimate to the nominal cruise airspeed
+	// If airspeed measurements are not being used, fix the airspeed estimate to the nominal trim airspeed
 	if (!PX4_ISFINITE(equivalent_airspeed) || !airspeed_sensor_enabled()) {
-		_EAS = _equivalent_airspeed_cruise;
+		_EAS = _equivalent_airspeed_trim;
 
 	} else {
 		_EAS = equivalent_airspeed;
@@ -242,11 +242,11 @@ void TECS::_update_energy_estimates()
 	_SKE_rate = _tas_state * _tas_rate_filtered;// kinetic energy rate of change
 }
 
-void TECS::_update_throttle_setpoint(const float throttle_cruise)
+void TECS::_update_throttle_setpoint()
 {
 	// Calculate demanded rate of change of total energy, respecting vehicle limits.
 	// We will constrain the value below.
-	float STE_rate_setpoint = _SPE_rate_setpoint + _SKE_rate_setpoint;
+	_STE_rate_setpoint = _SPE_rate_setpoint + _SKE_rate_setpoint;
 
 	// Calculate the total energy rate error, applying a first order IIR filter
 	// to reduce the effect of accelerometer noise
@@ -268,20 +268,22 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise)
 
 		STE_rate_setpoint = constrain(STE_rate_setpoint, _STE_rate_min, _STE_rate_max);
 
-		// Calculate a predicted throttle from the demanded rate of change of energy, using the cruise throttle
+		// Calculate a predicted throttle from the demanded rate of change of energy, using the trim throttle
 		// as the starting point. Assume:
 		// Specific total energy rate = _STE_rate_max is achieved when throttle is set to _throttle_setpoint_max
-		// Specific total energy rate = 0 at cruise throttle
+		// Specific total energy rate = 0 at trim throttle
 		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
 		float throttle_predicted = 0.0f;
 
-		if (STE_rate_setpoint >= 0) {
-			// throttle is between cruise and maximum
-			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max - throttle_cruise);
+		if (_STE_rate_setpoint >= 0) {
+			// throttle is between trim and maximum
+			throttle_predicted = _throttle_trim_applied + _STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max -
+					     _throttle_trim_applied);
 
 		} else {
-			// throttle is between cruise and minimum
-			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min - throttle_cruise);
+			// throttle is between trim and minimum
+			throttle_predicted = _throttle_trim_applied + _STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min -
+					     _throttle_trim_applied);
 
 		}
 
@@ -439,6 +441,28 @@ void TECS::_update_pitch_setpoint()
 					 _last_pitch_setpoint + ptchRateIncr);
 }
 
+void TECS::_updateAppliedTrimThrottle(float EAS_setpoint, float eas_to_tas)
+{
+	EAS_setpoint = math::constrain(EAS_setpoint, _equivalent_airspeed_min, _equivalent_airspeed_max);
+
+	float throttle_trim_applied = _throttle_trim;
+
+	if (PX4_ISFINITE(_throttle_trim_min) &&  EAS_setpoint <= _equivalent_airspeed_trim) {
+		const float airspeed_delta = _equivalent_airspeed_trim - _equivalent_airspeed_min;
+		const float throttle_delta = _throttle_trim - _throttle_trim_min;
+		throttle_trim_applied = _throttle_trim_min + throttle_delta * (EAS_setpoint - _equivalent_airspeed_min) / math::max(
+						airspeed_delta, FLT_EPSILON);
+
+	} else if (PX4_ISFINITE(_throttle_trim_max) && EAS_setpoint > _equivalent_airspeed_trim) {
+		const float airspeed_delta = _equivalent_airspeed_max - _equivalent_airspeed_trim;
+		const float throttle_delta = _throttle_trim_max - _throttle_trim;
+		throttle_trim_applied = _throttle_trim + throttle_delta * (EAS_setpoint - _equivalent_airspeed_trim) / math::max(
+						airspeed_delta, FLT_EPSILON);
+	}
+
+	_throttle_trim_applied = math::constrain(throttle_trim_applied, _throttle_trim_min, _throttle_trim_max);
+}
+
 void TECS::_updateTrajectoryGenerationConstraints()
 {
 	_alt_control_traj_generator.setMaxJerk(_jerk_max);
@@ -482,7 +506,7 @@ void TECS::_calculateHeightRateSetpoint(float altitude_sp_amsl, float height_rat
 	}
 }
 
-void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_altitude, float pitch_min_climbout,
+void TECS::_initialize_states(float pitch, float throttle_trim, float baro_altitude, float pitch_min_climbout,
 			      float EAS2TAS)
 {
 	if (_pitch_update_timestamp == 0 || _dt > DT_MAX || !_in_air || !_states_initialized) {
@@ -494,7 +518,7 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 		_tas_state = _EAS * EAS2TAS;
 		_throttle_integ_state =  0.0f;
 		_pitch_integ_state = 0.0f;
-		_last_throttle_setpoint = (_in_air ? throttle_cruise : 0.0f);;
+		_last_throttle_setpoint = (_in_air ? throttle_trim : 0.0f);;
 		_last_pitch_setpoint = constrain(pitch, _pitch_setpoint_min, _pitch_setpoint_max);
 		_pitch_setpoint_unc = _last_pitch_setpoint;
 		_TAS_setpoint_last = _EAS * EAS2TAS;
@@ -553,7 +577,8 @@ void TECS::_update_STE_rate_lim()
 
 void TECS::update_pitch_throttle(float pitch, float baro_altitude, float hgt_setpoint,
 				 float EAS_setpoint, float equivalent_airspeed, float eas_to_tas, bool climb_out_setpoint, float pitch_min_climbout,
-				 float throttle_min, float throttle_max, float throttle_cruise, float pitch_limit_min, float pitch_limit_max,
+				 float throttle_min, float throttle_max, float throttle_trim_min, float throttle_trim, float throttle_trim_max,
+				 float pitch_limit_min, float pitch_limit_max,
 				 float target_climbrate, float target_sinkrate, float hgt_rate_sp)
 {
 	// Calculate the time since last update (seconds)
@@ -566,14 +591,19 @@ void TECS::update_pitch_throttle(float pitch, float baro_altitude, float hgt_set
 	_pitch_setpoint_max = pitch_limit_max;
 	_pitch_setpoint_min = pitch_limit_min;
 	_climbout_mode_active = climb_out_setpoint;
+	_throttle_trim_min = throttle_trim_min;
+	_throttle_trim = throttle_trim;
+	_throttle_trim_max = throttle_trim_max;
 
 	// Initialize selected states and variables as required
-	_initialize_states(pitch, throttle_cruise, baro_altitude, pitch_min_climbout, eas_to_tas);
+	_initialize_states(pitch, throttle_trim, baro_altitude, pitch_min_climbout, eas_to_tas);
 
 	// Don't run TECS control algorithms when not in flight
 	if (!_in_air) {
 		return;
 	}
+
+	_updateAppliedTrimThrottle(EAS_setpoint, eas_to_tas);
 
 	_updateTrajectoryGenerationConstraints();
 
@@ -600,7 +630,7 @@ void TECS::update_pitch_throttle(float pitch, float baro_altitude, float hgt_set
 	_update_energy_estimates();
 
 	// Calculate the throttle demand
-	_update_throttle_setpoint(throttle_cruise);
+	_update_throttle_setpoint();
 
 	// Calculate the pitch demand
 	_update_pitch_setpoint();

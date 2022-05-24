@@ -230,9 +230,18 @@ PARAM_DEFINE_FLOAT(NPFG_SW_DST_MLT, 0.32f);
 PARAM_DEFINE_FLOAT(NPFG_PERIOD_SF, 1.5f);
 
 /**
- * Cruise throttle
+ * Minimum trim throttle
  *
- * This is the throttle setting required to achieve the desired cruise speed. Most airframes have a value of 0.5-0.7.
+ * This is the throttle setting required to achieve the FW_AIRSPD_MIN during level flight at nominal weight.
+ *
+ * @unit norm
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.01
+ * @group FW L1 Control
+ */
+PARAM_DEFINE_FLOAT(FW_THR_TRIM_MIN, -1.0f);
+
 /**
  * Trim throttle
  *
@@ -247,6 +256,18 @@ PARAM_DEFINE_FLOAT(NPFG_PERIOD_SF, 1.5f);
  */
 PARAM_DEFINE_FLOAT(FW_THR_TRIM, 0.6f);
 
+/**
+ * Maximum trim throttle
+ *
+ * This is the throttle setting required to achieve FW_AIRSPD_MAX during level flight at nominal weight.
+ *
+ * @unit norm
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.01
+ * @group FW L1 Control
+ */
+PARAM_DEFINE_FLOAT(FW_THR_TRIM_MAX, -1.0f);
 
 /**
  * Scale throttle by pressure change

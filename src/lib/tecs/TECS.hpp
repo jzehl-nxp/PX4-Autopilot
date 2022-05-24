@@ -89,12 +89,13 @@ public:
 	 */
 	void update_pitch_throttle(float pitch, float baro_altitude, float hgt_setpoint,
 				   float EAS_setpoint, float equivalent_airspeed, float eas_to_tas, bool climb_out_setpoint, float pitch_min_climbout,
-				   float throttle_min, float throttle_setpoint_max, float throttle_cruise,
+				   float throttle_min, float throttle_setpoint_max, float throttle_trim_min, float throttle_trim, float throttle_trim_max,
 				   float pitch_limit_min, float pitch_limit_max, float target_climbrate, float target_sinkrate, float hgt_rate_sp = NAN);
 
 	float get_throttle_setpoint() { return _last_throttle_setpoint; }
 	float get_pitch_setpoint() { return _last_pitch_setpoint; }
 	float get_speed_weight() { return _pitch_speed_weight; }
+	float get_throttle_trim_applied() { return _throttle_trim_applied; }
 
 	void reset_state() { _states_initialized = false; }
 
@@ -120,7 +121,7 @@ public:
 
 	void set_equivalent_airspeed_max(float airspeed) { _equivalent_airspeed_max = airspeed; }
 	void set_equivalent_airspeed_min(float airspeed) { _equivalent_airspeed_min = airspeed; }
-	void set_equivalent_airspeed_cruise(float airspeed) { _equivalent_airspeed_cruise = airspeed; }
+	void set_equivalent_airspeed_trim(float airspeed) { _equivalent_airspeed_trim = airspeed; }
 
 	void set_pitch_damping(float damping) { _pitch_damping_gain = damping; }
 	void set_vertical_accel_limit(float limit) { _vert_accel_limit = limit; }
@@ -175,7 +176,7 @@ public:
 
 	float STE_rate() { return _SPE_rate + _SKE_rate; }
 
-	float STE_rate_setpoint() { return _SPE_rate_setpoint + _SKE_rate_setpoint; }
+	float STE_rate_setpoint() { return _STE_rate_setpoint; }
 
 	float SEB() { return _SPE_estimate * _SPE_weighting - _SKE_estimate * _SKE_weighting; }
 
@@ -231,7 +232,7 @@ private:
 	float _airspeed_error_gain{0.1f};				///< airspeed error inverse time constant [1/s]
 	float _equivalent_airspeed_min{3.0f};				///< equivalent airspeed demand lower limit (m/sec)
 	float _equivalent_airspeed_max{30.0f};				///< equivalent airspeed demand upper limit (m/sec)
-	float _equivalent_airspeed_cruise{15.0f};			///< equivalent cruise airspeed for airspeed less mode (m/sec)
+	float _equivalent_airspeed_trim{15.0f};			///< equivalent cruise airspeed for airspeed less mode (m/sec)
 	float _throttle_slewrate{0.0f};					///< throttle demand slew rate limit (1/sec)
 	float _STE_rate_time_const{0.1f};				///< filter time constant for specific total energy rate (damping path) (s)
 	float _speed_derivative_time_const{0.01f};			///< speed derivative filter time constant (s)
@@ -272,6 +273,10 @@ private:
 	float _STE_rate_min{0.0f};					///< specific total energy rate lower limit acheived when throttle is at _throttle_setpoint_min (m**2/sec**3)
 	float _throttle_setpoint_max{0.0f};				///< normalised throttle upper limit
 	float _throttle_setpoint_min{0.0f};				///< normalised throttle lower limit
+	float _throttle_trim_min{0.0f};
+	float _throttle_trim{0.0f};					///< feedforward throttle applied when controller error is zero, is provided externally and can change in flight
+	float _throttle_trim_max{0.0f};
+	float _throttle_trim_applied{0.0f};
 	float _pitch_setpoint_max{0.5f};				///< pitch demand upper limit (rad)
 	float _pitch_setpoint_min{-0.5f};				///< pitch demand lower limit (rad)
 
@@ -280,6 +285,7 @@ private:
 	float _SKE_setpoint{0.0f};					///< specific kinetic energy demand (m**2/sec**2)
 	float _SPE_rate_setpoint{0.0f};					///< specific potential energy rate demand (m**2/sec**3)
 	float _SKE_rate_setpoint{0.0f};					///< specific kinetic energy rate demand (m**2/sec**3)
+	float _STE_rate_setpoint{0.0f};
 	float _SPE_estimate{0.0f};					///< specific potential energy estimate (m**2/sec**2)
 	float _SKE_estimate{0.0f};					///< specific kinetic energy estimate (m**2/sec**2)
 	float _SPE_rate{0.0f};						///< specific potential energy rate estimate (m**2/sec**3)
@@ -337,7 +343,7 @@ private:
 	/**
 	 * Update throttle setpoint
 	 */
-	void _update_throttle_setpoint(float throttle_cruise);
+	void _update_throttle_setpoint();
 
 	/**
 	 * Detect an uncommanded descent
@@ -348,6 +354,8 @@ private:
 	 * Update the pitch setpoint
 	 */
 	void _update_pitch_setpoint();
+
+	void _updateAppliedTrimThrottle(float EAS_setpoint, float eas_to_tas);
 
 	void _updateTrajectoryGenerationConstraints();
 

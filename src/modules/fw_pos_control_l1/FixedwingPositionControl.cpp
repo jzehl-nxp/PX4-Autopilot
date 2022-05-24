@@ -125,7 +125,7 @@ FixedwingPositionControl::parameters_update()
 	_tecs.set_max_climb_rate(_param_fw_t_clmb_max.get());
 	_tecs.set_max_sink_rate(_param_fw_t_sink_max.get());
 	_tecs.set_speed_weight(_param_fw_t_spdweight.get());
-	_tecs.set_equivalent_airspeed_cruise(_param_fw_airspd_trim.get());
+	_tecs.set_equivalent_airspeed_trim(_param_fw_airspd_trim.get());
 	_tecs.set_equivalent_airspeed_min(_param_fw_airspd_min.get());
 	_tecs.set_equivalent_airspeed_max(_param_fw_airspd_max.get());
 	_tecs.set_min_sink_rate(_param_fw_t_sink_min.get());
@@ -2616,7 +2616,7 @@ FixedwingPositionControl::get_nav_speed_2d(const Vector2f &ground_speed)
 void
 FixedwingPositionControl::tecs_update_pitch_throttle(const hrt_abstime &now, float alt_sp, float airspeed_sp,
 		float pitch_min_rad, float pitch_max_rad,
-		float throttle_min, float throttle_max, float throttle_cruise,
+		float throttle_min, float throttle_max, float throttle_trim,
 		bool climbout_mode, float climbout_pitch_min_rad,
 		bool disable_underspeed_detection, float hgt_rate_sp)
 {
@@ -2689,18 +2689,32 @@ FixedwingPositionControl::tecs_update_pitch_throttle(const hrt_abstime &now, flo
 	_tecs.update_vehicle_state_estimates(_airspeed, _body_acceleration(0), (_local_pos.timestamp > 0), in_air_alt_control,
 					     _current_altitude, _local_pos.vz);
 
+	float throttle_trim_min = _param_fw_thr_trim_min.get() >= 0.0f ? _param_fw_thr_trim_min.get() : NAN;
+	float throttle_trim_max = _param_fw_thr_trim_max.get() >= 0.0f ? _param_fw_thr_trim_max.get() : NAN;
+
 	/* scale throttle cruise by baro pressure */
 	if (_param_fw_thr_alt_scl.get() > FLT_EPSILON) {
 		vehicle_air_data_s air_data;
 
 		if (_vehicle_air_data_sub.copy(&air_data)) {
-			if (PX4_ISFINITE(air_data.baro_pressure_pa) && PX4_ISFINITE(_param_fw_thr_alt_scl.get())) {
-				// scale throttle as a function of sqrt(p0/p) (~ EAS -> TAS at low speeds and altitudes ignoring temperature)
-				const float eas2tas = sqrtf(CONSTANTS_STD_PRESSURE_PA / air_data.baro_pressure_pa);
-				const float scale = constrain((eas2tas - 1.0f) * _param_fw_thr_alt_scl.get() + 1.f, 1.f, 2.f);
+			if (PX4_ISFINITE(air_data.rho)) {
+				// scale throttle as a function of sqrt(rho0/rho)
+				const float eas2tas = sqrtf(CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C / air_data.rho);
+				const float scale = constrain(eas2tas * _param_fw_thr_alt_scl.get(), 1.f, 2.f);
 
+				// increase maximum throttle in order for the vehicle to achieve it's maximum energy rate
 				throttle_max = constrain(throttle_max * scale, throttle_min, 1.0f);
-				throttle_cruise = constrain(throttle_cruise * scale, throttle_min + 0.01f, throttle_max - 0.01f);
+
+				// increase throttle trim and the throttle trim limits
+				if (PX4_ISFINITE(throttle_trim_min)) {
+					throttle_trim_min = constrain(throttle_trim_min * scale, throttle_min, throttle_max);
+				}
+
+				if (PX4_ISFINITE(throttle_trim_max)) {
+					throttle_trim_max = constrain(throttle_trim_max * scale, throttle_min, throttle_max);
+				}
+
+				throttle_trim = constrain(throttle_trim * scale, throttle_min, throttle_max);
 			}
 		}
 	}
@@ -2710,7 +2724,7 @@ FixedwingPositionControl::tecs_update_pitch_throttle(const hrt_abstime &now, flo
 				    airspeed_sp, _airspeed, _eas2tas,
 				    climbout_mode,
 				    climbout_pitch_min_rad - radians(_param_fw_psp_off.get()),
-				    throttle_min, throttle_max, throttle_cruise,
+				    throttle_min, throttle_max, throttle_trim_min, throttle_trim, throttle_trim_max,
 				    pitch_min_rad - radians(_param_fw_psp_off.get()),
 				    pitch_max_rad - radians(_param_fw_psp_off.get()),
 				    _param_climbrate_target.get(), _param_sinkrate_target.get(), hgt_rate_sp);
