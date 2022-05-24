@@ -264,9 +264,12 @@ void TECS::_update_throttle_setpoint()
 		// Adjust the demanded total energy rate to compensate for induced drag rise in turns.
 		// Assume induced drag scales linearly with normal load factor.
 		// The additional normal load factor is given by (1/cos(bank angle) - 1)
-		STE_rate_setpoint = STE_rate_setpoint + _load_factor_correction * (_load_factor - 1.f);
+		_STE_rate_setpoint += _load_factor_correction * (_load_factor - 1.f);
 
-		STE_rate_setpoint = constrain(STE_rate_setpoint, _STE_rate_min, _STE_rate_max);
+		// Adjust the demanded total energy rate to compensate for vehicle weight relative to nominal weight
+		_STE_rate_setpoint += _load_factor_correction * (_weight_ratio - 1.f);
+
+		_STE_rate_setpoint = constrain(_STE_rate_setpoint, _STE_rate_min, _STE_rate_max);
 
 		// Calculate a predicted throttle from the demanded rate of change of energy, using the trim throttle
 		// as the starting point. Assume:

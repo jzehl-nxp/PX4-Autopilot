@@ -527,7 +527,11 @@ private:
 
 		(ParamFloat<px4::params::FW_TKO_PITCH_MIN>) _takeoff_pitch_min,
 
-		(ParamFloat<px4::params::NAV_FW_ALT_RAD>) _param_nav_fw_alt_rad
+		(ParamFloat<px4::params::NAV_FW_ALT_RAD>) _param_nav_fw_alt_rad,
+
+		(ParamFloat<px4::params::WEIGHT_BASE>) _param_weight_base,
+		(ParamFloat<px4::params::WEIGHT_GROSS>) _param_weight_gross
+
 	)
 
 };

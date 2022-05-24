@@ -144,6 +144,13 @@ FixedwingPositionControl::parameters_update()
 	_tecs.set_speed_derivative_time_constant(_param_tas_rate_time_const.get());
 	_tecs.set_seb_rate_ff_gain(_param_seb_rate_ff.get());
 
+	float weight_ratio = 1.0f;
+	if (_param_weight_base.get() > 0 && _param_weight_gross.get() > 0) {
+		weight_ratio = math::constrain(_param_weight_gross.get() / _param_weight_base.get(), 0.5f, 1.5f);
+	}
+
+	_tecs.set_weight_ratio(weight_ratio);
+
 
 	// Landing slope
 	/* check if negative value for 2/3 of flare altitude is set for throttle cut */
@@ -380,8 +387,8 @@ FixedwingPositionControl::vehicle_attitude_poll()
 		_body_acceleration = R.transpose() * Vector3f{_local_pos.ax, _local_pos.ay, _local_pos.az};
 		_body_velocity = R.transpose() * Vector3f{_local_pos.vx, _local_pos.vy, _local_pos.vz};
 
-		// update TECS load factor
-		const float load_factor = 1.f / cosf(euler_angles(0));
+		// load factor due to banking
+		float load_factor = 1.f / cosf(euler_angles(0));
 		_tecs.set_load_factor(load_factor);
 	}
 }
@@ -442,19 +449,12 @@ FixedwingPositionControl::get_auto_airspeed_setpoint(const hrt_abstime &now, con
 
 	float airspeed_min_adjusted = _param_fw_airspd_min.get();
 
-	/*
-	 * Calculate accelerated stall airspeed factor from commanded bank angle and use it to increase minimum airspeed.
-	 *
-	 * Increase lift vector to balance additional weight in bank
-	 * cos(bank angle) = W/L = 1/n, n is the load factor
-	 *
-	 * lift is proportional to airspeed^2 so the increase in stall speed is Vsacc = Vs * sqrt(n)
-	 */
 
-	if (_airspeed_valid && PX4_ISFINITE(_att_sp.roll_body)) {
-		airspeed_min_adjusted = constrain(_param_fw_airspd_stall.get() / sqrtf(cosf(_att_sp.roll_body)),
-						  airspeed_min_adjusted, _param_fw_airspd_max.get());
-	}
+	// Stall speed increases with the square root of the load factor times the weight ratio
+	// Vs ~ sqrt(load_factor * weight_ratio)
+	airspeed_min_adjusted = constrain(_param_fw_airspd_stall.get() * sqrtf(_tecs.get_load_factor() *
+					  _tecs.get_weight_ratio()),
+					  airspeed_min_adjusted, _param_fw_airspd_max.get());
 
 	// constrain setpoint
 	airspeed_setpoint = constrain(airspeed_setpoint, airspeed_min_adjusted, _param_fw_airspd_max.get());
