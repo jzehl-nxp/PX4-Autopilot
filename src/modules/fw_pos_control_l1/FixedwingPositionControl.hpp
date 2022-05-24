@@ -433,7 +433,7 @@ private:
 	 */
 	void tecs_update_pitch_throttle(const hrt_abstime &now, float alt_sp, float airspeed_sp,
 					float pitch_min_rad, float pitch_max_rad,
-					float throttle_min, float throttle_max, float throttle_cruise,
+					float throttle_min, float throttle_max, float throttle_trim,
 					bool climbout_mode, float climbout_pitch_min_rad,
 					bool disable_underspeed_detection = false, float hgt_rate_sp = NAN);
 
@@ -502,7 +502,7 @@ private:
 		(ParamFloat<px4::params::FW_T_SINK_R_SP>) _param_sinkrate_target,
 
 		(ParamFloat<px4::params::FW_THR_ALT_SCL>) _param_fw_thr_alt_scl,
-		(ParamFloat<px4::params::FW_THR_CRUISE>) _param_fw_thr_cruise,
+		(ParamFloat<px4::params::FW_THR_TRIM>) _param_fw_thr_trim,
 		(ParamFloat<px4::params::FW_THR_IDLE>) _param_fw_thr_idle,
 		(ParamFloat<px4::params::FW_THR_LND_MAX>) _param_fw_thr_lnd_max,
 		(ParamFloat<px4::params::FW_THR_MAX>) _param_fw_thr_max,
