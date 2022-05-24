@@ -258,16 +258,19 @@ FixedwingPositionControl::vehicle_command_poll()
 				abort_landing(true);
 			}
 
-		} else if ((vehicle_command.command == vehicle_command_s::VEHICLE_CMD_DO_CHANGE_SPEED)
-			   && (static_cast<uint8_t>(vehicle_command.param1 + .5f) == vehicle_command_s::SPEED_TYPE_AIRSPEED)
-			   && (vehicle_command.param2 > 0.f)) {
+		} else if (vehicle_command.command == vehicle_command_s::VEHICLE_CMD_DO_CHANGE_SPEED) {
 
-			if (_control_mode_current == FW_POSCTRL_MODE_AUTO) {
-				_pos_sp_triplet.current.cruising_speed = vehicle_command.param2;
+			if ((static_cast<uint8_t>(vehicle_command.param1 + .5f) == vehicle_command_s::SPEED_TYPE_AIRSPEED)) {
+				if (vehicle_command.param2 > 0.f) {
+					if (_control_mode_current == FW_POSCTRL_MODE_AUTO) {
+						_pos_sp_triplet.current.cruising_speed = vehicle_command.param2;
 
-			} else if (_control_mode_current == FW_POSCTRL_MODE_MANUAL_ALTITUDE
-				   || _control_mode_current == FW_POSCTRL_MODE_MANUAL_POSITION) {
-				_commanded_airspeed_setpoint = vehicle_command.param2;
+					} else if (_control_mode_current == FW_POSCTRL_MODE_MANUAL_ALTITUDE
+						   || _control_mode_current == FW_POSCTRL_MODE_MANUAL_POSITION) {
+						_commanded_airspeed_setpoint = vehicle_command.param2;
+					}
+
+				}
 			}
 
 		}
