@@ -474,22 +474,22 @@ void TECS::_mapAirspeedSetpointToTrimThrottle(float EAS_setpoint)
 {
 	EAS_setpoint = math::constrain(EAS_setpoint, _equivalent_airspeed_min, _equivalent_airspeed_max);
 
-	float throttle_trim_applied = _throttle_trim;
+	float throttle_trim_mapped = _throttle_trim;
 
 	if (PX4_ISFINITE(_throttle_trim_min) &&  EAS_setpoint <= _equivalent_airspeed_trim) {
 		const float airspeed_delta = _equivalent_airspeed_trim - _equivalent_airspeed_min;
 		const float throttle_delta = _throttle_trim - _throttle_trim_min;
-		throttle_trim_applied = _throttle_trim_min + throttle_delta * (EAS_setpoint - _equivalent_airspeed_min) / math::max(
-						airspeed_delta, FLT_EPSILON);
+		throttle_trim_mapped = _throttle_trim_min + throttle_delta * (EAS_setpoint - _equivalent_airspeed_min) / math::max(
+					       airspeed_delta, FLT_EPSILON);
 
 	} else if (PX4_ISFINITE(_throttle_trim_max) && EAS_setpoint > _equivalent_airspeed_trim) {
 		const float airspeed_delta = _equivalent_airspeed_max - _equivalent_airspeed_trim;
 		const float throttle_delta = _throttle_trim_max - _throttle_trim;
-		throttle_trim_applied = _throttle_trim + throttle_delta * (EAS_setpoint - _equivalent_airspeed_trim) / math::max(
-						airspeed_delta, FLT_EPSILON);
+		throttle_trim_mapped = _throttle_trim + throttle_delta * (EAS_setpoint - _equivalent_airspeed_trim) / math::max(
+					       airspeed_delta, FLT_EPSILON);
 	}
 
-	_throttle_trim_mapped = math::constrain(throttle_trim_applied, _throttle_trim_min, _throttle_trim_max);
+	_throttle_trim_mapped = math::constrain(throttle_trim_mapped, _throttle_trim_min, _throttle_trim_max);
 }
 
 void TECS::_updateTrajectoryGenerationConstraints()
