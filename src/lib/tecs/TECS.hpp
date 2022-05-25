@@ -98,7 +98,6 @@ public:
 	float get_throttle_trim_mapped() { return _throttle_trim_mapped; }
 
 	float get_load_factor() { return _load_factor;}
-	float get_weight_ratio() { return _weight_ratio; }
 
 	void reset_state() { _states_initialized = false; }
 
@@ -138,7 +137,6 @@ public:
 
 	void set_roll_throttle_compensation(float compensation) { _load_factor_correction = compensation; }
 	void set_load_factor(float load_factor) { _load_factor = load_factor; }
-	void set_weight_ratio(float weight_ratio) { _weight_ratio = weight_ratio; }
 
 	void set_ste_rate_time_const(float time_const) { _STE_rate_time_const = time_const; }
 	void set_speed_derivative_time_constant(float time_const) { _speed_derivative_time_const = time_const; }
@@ -233,7 +231,6 @@ private:
 	float _vert_accel_limit{0.0f};					///< magnitude of the maximum vertical acceleration allowed (m/sec**2)
 	float _load_factor{1.0f};					///< additional normal load factor
 	float _load_factor_correction{0.0f};				///< gain from normal load factor increase to total energy rate demand (m**2/sec**3)
-	float _weight_ratio{1.0f};					///< the ratio of actual gross weight to nominal weight
 	float _pitch_speed_weight{1.0f};				///< speed control weighting used by pitch demand calculation
 	float _height_error_gain{0.2f};					///< height error inverse time constant [1/s]
 	float _height_setpoint_gain_ff{0.0f};				///< gain from height demand derivative to demanded climb rate
