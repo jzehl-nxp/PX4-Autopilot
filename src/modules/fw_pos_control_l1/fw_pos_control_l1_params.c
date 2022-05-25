@@ -233,6 +233,9 @@ PARAM_DEFINE_FLOAT(NPFG_PERIOD_SF, 1.5f);
  * Minimum trim throttle
  *
  * This is the throttle setting required to achieve the FW_AIRSPD_MIN during level flight at nominal weight.
+ * Setting this to a negative value disables the mapping from equivalent airspeed to cruise throttle for airspeed
+ * setpoints below the trim airspeed setpoint. For vehicles without an airspeed sensor this means that airspeed setpoints
+ * below the trim airspeed setpoint will not have any effect.
  *
  * @unit norm
  * @max 1.0
@@ -260,6 +263,9 @@ PARAM_DEFINE_FLOAT(FW_THR_TRIM, 0.6f);
  * Maximum trim throttle
  *
  * This is the throttle setting required to achieve FW_AIRSPD_MAX during level flight at nominal weight.
+ * Setting this to a negative value disables the mapping from equivalent airspeed to cruise throttle for airspeed
+ * setpoints above the trim airspeed setpoint. For vehicles without an airspeed sensor this means that airspeed setpoints
+ * above the trim airspeed setpoint will not have any effect.
  *
  * @unit norm
  * @max 1.0
