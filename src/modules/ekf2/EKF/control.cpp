@@ -409,30 +409,38 @@ void Ekf::controlOpticalFlowFusion()
 		const float delta_time_min = fmaxf(0.7f * _delta_time_of, 0.001f);
 		const float delta_time_max = fminf(1.3f * _delta_time_of, 0.2f);
 		const bool is_delta_time_good = _flow_sample_delayed.dt >= delta_time_min && _flow_sample_delayed.dt <= delta_time_max;
-		const bool is_body_rate_comp_available = calcOptFlowBodyRateComp();
 
-		if (is_quality_good
+		const bool gyro_valid = PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(0)) && PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(1)) && PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(2));
+
+		// if accumulation time differences are not excessive and accumulation time is adequate
+		// compare the optical flow and and navigation rate data and calculate a bias error
+		if (gyro_valid
+		    && (_delta_time_of > FLT_EPSILON)
+		    && (_flow_sample_delayed.dt > FLT_EPSILON)
+		    && (fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f)) {
+
+			const Vector3f reference_body_rate(_imu_del_ang_of * (1.f / _delta_time_of));
+			const Vector3f measured_body_rate(_flow_sample_delayed.gyro_xyz * (1.f / _flow_sample_delayed.dt));
+
+			// calculate the bias estimate using  a combined LPF and spike filter
+			_flow_gyro_bias = _flow_gyro_bias * 0.99f + matrix::constrain(measured_body_rate - reference_body_rate, -0.1f, 0.1f) * 0.01f;
+
+			// reset the accumulators
+			_imu_del_ang_of.setZero();
+			_delta_time_of = 0.f;
+		}
+
+		if ((_flow_sample_delayed.dt > delta_time_min)
+		    && is_quality_good
 		    && is_magnitude_good
 		    && is_tilt_good
-		    && is_body_rate_comp_available
-		    && is_delta_time_good) {
+		    && is_delta_time_good
+		    && gyro_valid) {
+
 			// compensate for body motion to give a LOS rate
 			_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
 
 		} else if (!_control_status.flags.in_air) {
-
-			if (!is_delta_time_good) {
-				// handle special case of SITL and PX4Flow where dt is forced to
-				// zero when the quaity is 0
-				_flow_sample_delayed.dt = delta_time_min;
-			}
-
-			// don't allow invalid flow gyro_xyz to propagate
-			if (!is_body_rate_comp_available) {
-				if (!PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(0)) || !PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(1)) || !PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(2))) {
-					_flow_sample_delayed.gyro_xyz.zero();
-				}
-			}
 
 			// when on the ground with poor flow quality,
 			// assume zero ground relative velocity and LOS rate
@@ -459,11 +467,11 @@ void Ekf::controlOpticalFlowFusion()
 						  || isOnlyActiveSourceOfHorizontalAiding(_control_status.flags.opt_flow)
 						  || (_control_status.flags.gps && (_gps_error_norm > gps_err_norm_lim))); // is using GPS, but GPS is bad
 
-
 		// inhibit use of optical flow if motion is unsuitable and we are not reliant on it for flight navigation
 		const bool preflight_motion_not_ok = !_control_status.flags.in_air
 						     && ((_imu_sample_delayed.time_us > (_time_good_motion_us + (uint64_t)1E5))
 								     || (_imu_sample_delayed.time_us < (_time_bad_motion_us + (uint64_t)5E6)));
+
 		const bool flight_condition_not_ok = _control_status.flags.in_air && !isTerrainEstimateValid();
 
 		_inhibit_flow_use = ((preflight_motion_not_ok || flight_condition_not_ok) && !is_flow_required)

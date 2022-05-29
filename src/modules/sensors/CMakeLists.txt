@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (c) 2015-2019 PX4 Development Team. All rights reserved.
+#   Copyright (c) 2015-2022 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -39,15 +39,19 @@ add_subdirectory(vehicle_angular_velocity)
 add_subdirectory(vehicle_air_data)
 add_subdirectory(vehicle_gps_position)
 add_subdirectory(vehicle_imu)
-add_subdirectory(vehicle_magnetometer)
+#add_subdirectory(vehicle_magnetometer)
+add_subdirectory(vehicle_optical_flow)
 
 px4_add_module(
 	MODULE modules__sensors
 	MAIN sensors
+	INCLUDES
+		${CMAKE_CURRENT_SOURCE_DIR}
 	SRCS
 		sensors.cpp
 		voted_sensors_update.cpp
 		voted_sensors_update.h
+		Integrator.hpp
 	MODULE_CONFIG
 		module.yaml
 	DEPENDS
@@ -61,5 +65,6 @@ px4_add_module(
 		vehicle_air_data
 		vehicle_gps_position
 		vehicle_imu
-		vehicle_magnetometer
+		#vehicle_magnetometer
+		vehicle_optical_flow
 	)

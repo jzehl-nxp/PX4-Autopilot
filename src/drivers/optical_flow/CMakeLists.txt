@@ -31,6 +31,7 @@
 #
 ############################################################################
 
+add_subdirectory(paa3905)
 add_subdirectory(paw3902)
 add_subdirectory(pmw3901)
 add_subdirectory(px4flow)

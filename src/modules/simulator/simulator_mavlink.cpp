@@ -1311,21 +1311,39 @@ void Simulator::check_failure_injections()
 
 int Simulator::publish_flow_topic(const mavlink_hil_optical_flow_t *flow_mavlink)
 {
-	optical_flow_s flow = {};
-	flow.sensor_id = flow_mavlink->sensor_id;
-	flow.timestamp = hrt_absolute_time();
-	flow.time_since_last_sonar_update = 0;
-	flow.frame_count_since_last_readout = 0; // ?
-	flow.integration_timespan = flow_mavlink->integration_time_us;
+	sensor_optical_flow_s flow{};
 
-	flow.ground_distance_m = flow_mavlink->distance;
-	flow.gyro_temperature = flow_mavlink->temperature;
-	flow.gyro_x_rate_integral = flow_mavlink->integrated_xgyro;
-	flow.gyro_y_rate_integral = flow_mavlink->integrated_ygyro;
-	flow.gyro_z_rate_integral = flow_mavlink->integrated_zgyro;
-	flow.pixel_flow_x_integral = flow_mavlink->integrated_x;
-	flow.pixel_flow_y_integral = flow_mavlink->integrated_y;
+	flow.timestamp_sample = hrt_absolute_time();
+
+	flow.device_id = 0; // TODO
+
+	flow.pixel_flow[0] = flow_mavlink->integrated_x;
+	flow.pixel_flow[1] = flow_mavlink->integrated_y;
+
+	/* rotate measurements according to parameter */
+	int32_t flow_rot_int;
+	param_get(param_find("SENS_FLOW_ROT"), &flow_rot_int);
+	const enum Rotation flow_rot = (Rotation)flow_rot_int;
+
+	float zeroval = 0.0f;
+	rotate_3f(flow_rot, flow.pixel_flow[0], flow.pixel_flow[1], zeroval);
+
+	flow.dt = flow_mavlink->integration_time_us;
+
 	flow.quality = flow_mavlink->quality;
+
+	//flow.ground_distance_m = flow_mavlink->distance;
+
+	if (PX4_ISFINITE(flow_mavlink->integrated_xgyro) && PX4_ISFINITE(flow_mavlink->integrated_ygyro)
+	    && PX4_ISFINITE(flow_mavlink->integrated_zgyro)) {
+		flow.delta_angle[0] = flow_mavlink->integrated_xgyro;
+		flow.delta_angle[1] = flow_mavlink->integrated_ygyro;
+		flow.delta_angle[2] = flow_mavlink->integrated_zgyro;
+
+		flow.delta_angle_available = true;
+
+		rotate_3f(flow_rot, flow.delta_angle[0], flow.delta_angle[1], flow.delta_angle[2]);
+	}
 
 	/* fill in sensor limits */
 	float flow_rate_max;
@@ -1339,16 +1357,8 @@ int Simulator::publish_flow_topic(const mavlink_hil_optical_flow_t *flow_mavlink
 	flow.min_ground_distance = flow_min_hgt;
 	flow.max_ground_distance = flow_max_hgt;
 
-	/* rotate measurements according to parameter */
-	int32_t flow_rot_int;
-	param_get(param_find("SENS_FLOW_ROT"), &flow_rot_int);
-	const enum Rotation flow_rot = (Rotation)flow_rot_int;
-
-	float zeroval = 0.0f;
-	rotate_3f(flow_rot, flow.pixel_flow_x_integral, flow.pixel_flow_y_integral, zeroval);
-	rotate_3f(flow_rot, flow.gyro_x_rate_integral, flow.gyro_y_rate_integral, flow.gyro_z_rate_integral);
-
-	_flow_pub.publish(flow);
+	flow.timestamp = hrt_absolute_time();
+	_sensor_optical_flow_pub.publish(flow);
 
 	return PX4_OK;
 }

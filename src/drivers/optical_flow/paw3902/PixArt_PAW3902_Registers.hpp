@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2022 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2019-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,12 +45,12 @@ static constexpr uint8_t Bit5 = (1 << 5);
 static constexpr uint8_t Bit6 = (1 << 6);
 static constexpr uint8_t Bit7 = (1 << 7);
 
-namespace PixArt_PAA3905
+namespace PixArt_PAW3902
 {
 
-static constexpr uint8_t PRODUCT_ID         = 0xA2;
-static constexpr uint8_t REVISION_ID        = 0x00;
-static constexpr uint8_t PRODUCT_ID_INVERSE = 0x5D;
+static constexpr uint8_t PRODUCT_ID         = 0x49;
+static constexpr uint8_t REVISION_ID        = 0x01;
+static constexpr uint8_t PRODUCT_ID_INVERSE = 0xB6;
 
 static constexpr uint32_t SAMPLE_INTERVAL_MODE_0{1000000 / 126}; // 126 fps
 static constexpr uint32_t SAMPLE_INTERVAL_MODE_1{1000000 / 126}; // 126 fps
@@ -77,14 +77,12 @@ enum Register : uint8_t {
 	Maximum_RawData    = 0x09,
 	Minimum_RawData    = 0x0A,
 	Shutter_Lower      = 0x0B,
-	Shutter_Middle     = 0x0C,
-	Shutter_Upper      = 0x0D,
+	Shutter_Upper      = 0x0C,
 
 	Observation        = 0x15,
 	Motion_Burst       = 0x16,
 
 	Power_Up_Reset     = 0x3A,
-	Shutdown           = 0x3B,
 
 	Resolution	   = 0x4E,
 
@@ -92,19 +90,7 @@ enum Register : uint8_t {
 };
 
 enum Motion_Bit : uint8_t {
-	MotionOccurred     = Bit7, // Motion since last report
-
-	ChallengingSurface = Bit0, // Challenging surface is detected
-};
-
-enum Observation_Bit : uint8_t {
-	// Bit [7:6]
-	AMS_mode_0 = 0,
-	AMS_mode_1 = Bit6,
-	AMS_mode_2 = Bit7,
-
-	// Bit [5:0]
-	WorkingCorrectly = 0x3F,
+	MOT = Bit7, // Motion since last report
 };
 
 enum class Mode {
@@ -120,13 +106,11 @@ struct BURST_TRANSFER {
 	uint8_t Delta_X_H;
 	uint8_t Delta_Y_L;
 	uint8_t Delta_Y_H;
-	uint8_t Reserved;
 	uint8_t SQUAL;
 	uint8_t RawData_Sum;
 	uint8_t Maximum_RawData;
 	uint8_t Minimum_RawData;
 	uint8_t Shutter_Upper;
-	uint8_t Shutter_Middle;
 	uint8_t Shutter_Lower;
 };
 

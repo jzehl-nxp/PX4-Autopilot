@@ -48,6 +48,7 @@
 #include <lib/mathlib/mathlib.h>
 #include <lib/parameters/param.h>
 #include <lib/perf/perf_counter.h>
+#include <lib/sensor_calibration/Magnetometer.hpp>
 #include <lib/sensor_calibration/Utilities.hpp>
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/module.h>
@@ -66,6 +67,7 @@
 #include <uORB/topics/differential_pressure.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/sensor_baro.h>
+#include <uORB/topics/sensor_mag.h>
 #include <uORB/topics/sensors_status_imu.h>
 #include <uORB/topics/vehicle_air_data.h>
 #include <uORB/topics/vehicle_control_mode.h>
@@ -77,7 +79,13 @@
 #include "vehicle_air_data/VehicleAirData.hpp"
 #include "vehicle_gps_position/VehicleGPSPosition.hpp"
 #include "vehicle_imu/VehicleIMU.hpp"
-#include "vehicle_magnetometer/VehicleMagnetometer.hpp"
+
+
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
+# include "vehicle_magnetometer/VehicleMagnetometer.hpp"
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+
+#include "vehicle_optical_flow/VehicleOpticalFlow.hpp"
 
 using namespace sensors;
 using namespace time_literals;
@@ -179,7 +187,12 @@ private:
 	VehicleAcceleration	_vehicle_acceleration;
 	VehicleAngularVelocity	_vehicle_angular_velocity;
 	VehicleAirData          *_vehicle_air_data{nullptr};
-	VehicleMagnetometer     *_vehicle_magnetometer{nullptr};
+
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
+	VehicleMagnetometer     *_vehicle_magnetometer {nullptr};
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+
+	VehicleOpticalFlow      *_vehicle_optical_flow{nullptr};
 	VehicleGPSPosition	*_vehicle_gps_position{nullptr};
 
 	VehicleIMU      *_vehicle_imu_list[MAX_SENSOR_COUNT] {};
@@ -220,6 +233,7 @@ private:
 	void		InitializeVehicleGPSPosition();
 	void		InitializeVehicleIMU();
 	void		InitializeVehicleMagnetometer();
+	void		InitializeVehicleOpticalFlow();
 
 	DEFINE_PARAMETERS(
 		(ParamBool<px4::params::SYS_HAS_BARO>) _param_sys_has_baro,
@@ -268,7 +282,12 @@ Sensors::Sensors(bool hil_enabled) :
 	InitializeVehicleAirData();
 	InitializeVehicleGPSPosition();
 	InitializeVehicleIMU();
+
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
 	InitializeVehicleMagnetometer();
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+
+	InitializeVehicleOpticalFlow();
 }
 
 Sensors::~Sensors()
@@ -291,9 +310,18 @@ Sensors::~Sensors()
 		delete _vehicle_gps_position;
 	}
 
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
+
 	if (_vehicle_magnetometer) {
 		_vehicle_magnetometer->Stop();
 		delete _vehicle_magnetometer;
+	}
+
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+
+	if (_vehicle_optical_flow) {
+		_vehicle_optical_flow->Stop();
+		delete _vehicle_optical_flow;
 	}
 
 	for (auto &vehicle_imu : _vehicle_imu_list) {
@@ -385,7 +413,10 @@ int Sensors::parameters_update()
 
 	InitializeVehicleAirData();
 	InitializeVehicleGPSPosition();
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
 	InitializeVehicleMagnetometer();
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+	InitializeVehicleOpticalFlow();
 
 	return PX4_OK;
 }
@@ -624,6 +655,7 @@ void Sensors::InitializeVehicleIMU()
 	}
 }
 
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
 void Sensors::InitializeVehicleMagnetometer()
 {
 	if (_param_sys_has_mag.get()) {
@@ -632,6 +664,22 @@ void Sensors::InitializeVehicleMagnetometer()
 
 			if (_vehicle_magnetometer) {
 				_vehicle_magnetometer->Start();
+			}
+		}
+	}
+}
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+
+void Sensors::InitializeVehicleOpticalFlow()
+{
+	if (_vehicle_optical_flow == nullptr) {
+		uORB::Subscription sensor_optical_flow_sub{ORB_ID(sensor_optical_flow)};
+
+		if (sensor_optical_flow_sub.advertised()) {
+			_vehicle_optical_flow = new VehicleOpticalFlow();
+
+			if (_vehicle_optical_flow) {
+				_vehicle_optical_flow->Start();
 			}
 		}
 	}
@@ -766,9 +814,18 @@ int Sensors::print_status()
 {
 	_voted_sensors_update.printStatus();
 
+#if defined(SENSORS_VEHICLE_MAGNETOMETER)
+
 	if (_vehicle_magnetometer) {
 		PX4_INFO_RAW("\n");
 		_vehicle_magnetometer->PrintStatus();
+	}
+
+#endif // SENSORS_VEHICLE_MAGNETOMETER
+
+	if (_vehicle_optical_flow) {
+		PX4_INFO_RAW("\n");
+		_vehicle_optical_flow->PrintStatus();
 	}
 
 	if (_vehicle_air_data) {

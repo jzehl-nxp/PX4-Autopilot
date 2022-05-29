@@ -34,7 +34,7 @@
 #ifndef OPTICAL_FLOW_RAD_HPP
 #define OPTICAL_FLOW_RAD_HPP
 
-#include <uORB/topics/optical_flow.h>
+#include <uORB/topics/vehicle_optical_flow.h>
 
 class MavlinkStreamOpticalFlowRad : public MavlinkStream
 {
@@ -49,23 +49,24 @@ public:
 
 	unsigned get_size() override
 	{
-		return _optical_flow_sub.advertised() ? (MAVLINK_MSG_ID_OPTICAL_FLOW_RAD_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES) : 0;
+		return _vehicle_optical_flow_sub.advertised() ? (MAVLINK_MSG_ID_OPTICAL_FLOW_RAD_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES) :
+		       0;
 	}
 
 private:
 	explicit MavlinkStreamOpticalFlowRad(Mavlink *mavlink) : MavlinkStream(mavlink) {}
 
-	uORB::Subscription _optical_flow_sub{ORB_ID(optical_flow)};
+	uORB::Subscription _vehicle_optical_flow_sub{ORB_ID(vehicle_optical_flow)};
 
 	bool send() override
 	{
-		optical_flow_s flow;
+		vehicle_optical_flow_s flow;
 
-		if (_optical_flow_sub.update(&flow)) {
+		if (_vehicle_optical_flow_sub.update(&flow)) {
 			mavlink_optical_flow_rad_t msg{};
 
 			msg.time_usec = flow.timestamp;
-			msg.sensor_id = flow.sensor_id;
+			msg.sensor_id = _vehicle_optical_flow_sub.get_instance();
 			msg.integrated_x = flow.pixel_flow_x_integral;
 			msg.integrated_y = flow.pixel_flow_y_integral;
 			msg.integrated_xgyro = flow.gyro_x_rate_integral;
@@ -74,9 +75,6 @@ private:
 			msg.distance = flow.ground_distance_m;
 			msg.quality = flow.quality;
 			msg.integration_time_us = flow.integration_timespan;
-			msg.sensor_id = flow.sensor_id;
-			msg.time_delta_distance_us = flow.time_since_last_sonar_update;
-			msg.temperature = flow.gyro_temperature;
 
 			mavlink_msg_optical_flow_rad_send_struct(_mavlink->get_channel(), &msg);
 

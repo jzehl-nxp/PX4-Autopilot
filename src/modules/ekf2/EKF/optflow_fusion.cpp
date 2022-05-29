@@ -333,56 +333,6 @@ void Ekf::fuseOptFlow()
 	}
 }
 
-// calculate optical flow body angular rate compensation
-// returns false if bias corrected body rate data is unavailable
-bool Ekf::calcOptFlowBodyRateComp()
-{
-	// reset the accumulators if the time interval is too large
-	if (_delta_time_of > 1.0f) {
-		_imu_del_ang_of.setZero();
-		_delta_time_of = 0.0f;
-		return false;
-	}
-
-	bool is_body_rate_comp_available = false;
-	const bool use_flow_sensor_gyro = PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(0)) && PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(1)) && PX4_ISFINITE(_flow_sample_delayed.gyro_xyz(2));
-
-	if (use_flow_sensor_gyro) {
-
-		// if accumulation time differences are not excessive and accumulation time is adequate
-		// compare the optical flow and and navigation rate data and calculate a bias error
-		if ((_delta_time_of > FLT_EPSILON)
-		    && (_flow_sample_delayed.dt > FLT_EPSILON)
-		    && (fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f)) {
-
-			const Vector3f reference_body_rate(_imu_del_ang_of * (1.0f / _delta_time_of));
-
-			const Vector3f measured_body_rate(_flow_sample_delayed.gyro_xyz * (1.0f / _flow_sample_delayed.dt));
-
-			// calculate the bias estimate using  a combined LPF and spike filter
-			_flow_gyro_bias = _flow_gyro_bias * 0.99f + matrix::constrain(measured_body_rate - reference_body_rate, -0.1f, 0.1f) * 0.01f;
-
-			is_body_rate_comp_available = true;
-		}
-
-	} else {
-		// Use the EKF gyro data if optical flow sensor gyro data is not available
-		// for clarification of the sign see definition of flowSample and imuSample in common.h
-		if ((_delta_time_of > FLT_EPSILON)
-		    && (_flow_sample_delayed.dt > FLT_EPSILON)) {
-			_flow_sample_delayed.gyro_xyz = -_imu_del_ang_of / _delta_time_of * _flow_sample_delayed.dt;
-			_flow_gyro_bias.zero();
-
-			is_body_rate_comp_available = true;
-		}
-	}
-
-	// reset the accumulators
-	_imu_del_ang_of.setZero();
-	_delta_time_of = 0.0f;
-	return is_body_rate_comp_available;
-}
-
 // calculate the measurement variance for the optical flow sensor (rad/sec)^2
 float Ekf::calcOptFlowMeasVar()
 {

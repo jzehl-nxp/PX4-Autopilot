@@ -701,10 +701,6 @@ private:
 	void updateGpsPos(const gpsSample &gps_sample);
 	void fuseGpsPos();
 
-	// calculate optical flow body angular rate compensation
-	// returns false if bias corrected body rate data is unavailable
-	bool calcOptFlowBodyRateComp();
-
 	// initialise the terrain vertical position estimator
 	void initHagl();
 

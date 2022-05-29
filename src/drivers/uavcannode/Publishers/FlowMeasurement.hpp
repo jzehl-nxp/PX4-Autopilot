@@ -39,7 +39,7 @@
 #include <conversion/rotation.h>
 
 #include <uORB/SubscriptionCallback.hpp>
-#include <uORB/topics/optical_flow.h>
+#include <uORB/topics/vehicle_optical_flow.h>
 
 namespace uavcannode
 {
@@ -52,7 +52,7 @@ class FlowMeasurement :
 public:
 	FlowMeasurement(px4::WorkItem *work_item, uavcan::INode &node) :
 		UavcanPublisherBase(com::hex::equipment::flow::Measurement::DefaultDataTypeID),
-		uORB::SubscriptionCallbackWorkItem(work_item, ORB_ID(optical_flow)),
+		uORB::SubscriptionCallbackWorkItem(work_item, ORB_ID(vehicle_optical_flow)),
 		uavcan::Publisher<com::hex::equipment::flow::Measurement>(node)
 	{
 		_rotation = matrix::Dcmf{matrix::Eulerf{0.f, 0.f, 0.f}};
@@ -80,7 +80,7 @@ public:
 	void BroadcastAnyUpdates() override
 	{
 		// optical_flow -> com::hex::equipment::flow::Measurement
-		optical_flow_s optical_flow;
+		vehicle_optical_flow_s optical_flow;
 
 		if (uORB::SubscriptionCallbackWorkItem::update(&optical_flow)) {
 			com::hex::equipment::flow::Measurement measurement{};
@@ -92,6 +92,7 @@ public:
 
 			measurement.rate_gyro_integral[0] = gyro_flow_rotated(0);
 			measurement.rate_gyro_integral[1] = gyro_flow_rotated(1);
+
 			measurement.flow_integral[0] = pixel_flow_rotated(0);
 			measurement.flow_integral[1] = pixel_flow_rotated(1);
 
