@@ -234,11 +234,11 @@ void AutopilotTesterFollowMe::straight_line_test(const bool stream_velocity)
 			config.follow_angle_deg = 180.0f;
 			CHECK(FollowMe::Result::Success == _follow_me->set_config(config));
 
-		} else if (location_update_idx > 5 && location_update_idx < 15) {
+		} else if (location_update_idx < 15) {
 			// Move target for 10 samples and wait for steady state of drone
 			target_moving = true;
 
-		} else if (location_update_idx >= 15 && location_update_idx < 20) {
+		} else if (location_update_idx < 20) {
 			// Perform positional checks in steady state for 5 samples
 			perform_checks = true;
 
@@ -248,10 +248,10 @@ void AutopilotTesterFollowMe::straight_line_test(const bool stream_velocity)
 			config.follow_angle_deg = 0.0f;
 			CHECK(FollowMe::Result::Success == _follow_me->set_config(config));
 
-		} else if (location_update_idx > 20 && location_update_idx < 30) {
+		} else if (location_update_idx < 30) {
 			// Move target for 10 samples and wait for steady state of drone
 
-		} else if (location_update_idx >= 30 && location_update_idx < 35) {
+		} else if (location_update_idx < 35) {
 			// Perform positional checks in steady state for 5 samples
 			perform_checks = true;
 
@@ -261,10 +261,10 @@ void AutopilotTesterFollowMe::straight_line_test(const bool stream_velocity)
 			config.follow_angle_deg = 45.0f;
 			CHECK(FollowMe::Result::Success == _follow_me->set_config(config));
 
-		} else if (location_update_idx > 35 && location_update_idx < 45) {
+		} else if (location_update_idx < 45) {
 			// Move target for 10 samples and wait for steady state of drone
 
-		} else if (location_update_idx >= 45 && location_update_idx < 55) {
+		} else if (location_update_idx < 55) {
 			// Perform positional checks in steady state for 5 samples
 			perform_checks = true;
 
@@ -274,10 +274,10 @@ void AutopilotTesterFollowMe::straight_line_test(const bool stream_velocity)
 			config.follow_angle_deg = -45.0f;
 			CHECK(FollowMe::Result::Success == _follow_me->set_config(config));
 
-		} else if (location_update_idx > 55 && location_update_idx < 65) {
+		} else if (location_update_idx < 65) {
 			// Move target for 10 samples and wait for steady state of drone
 
-		} else if (location_update_idx >= 65 && location_update_idx < 75) {
+		} else if (location_update_idx < 75) {
 			// Perform positional checks in steady state for 10 samples
 			perform_checks = true;
 		}
