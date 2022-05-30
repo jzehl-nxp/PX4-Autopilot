@@ -57,7 +57,7 @@ void WeatherVane::update()
 		// in manual mode we just want to use weathervane if position is controlled as well
 		// in mission, enabling wv is done in flight task
 		if (vehicle_control_mode.flag_control_manual_enabled) {
-			if (vehicle_control_mode.flag_control_position_enabled && is_enabled_by_param()) {
+			if (isEnabledByParam() && vehicle_control_mode.flag_control_position_enabled) {
 				activate();
 
 			} else {
@@ -67,7 +67,7 @@ void WeatherVane::update()
 	}
 }
 
-float WeatherVane::get_weathervane_yawrate()
+float WeatherVane::getWeathervaneYawrate()
 {
 	// direction of desired body z axis represented in earth frame
 	vehicle_attitude_setpoint_s vehicle_attitude_setpoint;

@@ -61,21 +61,19 @@ public:
 
 	void deactivate() {_is_active = false;}
 
-	bool is_active() {return _is_active;}
+	bool isActive() {return _is_active;}
 
-	bool is_enabled_by_param() { return _param_wv_en.get(); }
+	bool isEnabledByParam() { return _param_wv_en.get(); }
 
 	void update();
 
-	float get_weathervane_yawrate();
+	float getWeathervaneYawrate();
 
 private:
 	uORB::Subscription _vehicle_attitude_setpoint_sub{ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
-
-	float _yaw = 0.0f; ///< current yaw angle
 
 	bool _is_active = true;
 

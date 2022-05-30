@@ -249,7 +249,7 @@ void FlightTaskAuto::_prepareLandSetpoints()
 		vertical_speed *= (1 + _sticks.getPositionExpo()(2));
 
 		// Only set a yawrate setpoint if weather vane is not active or the yaw stick is out of its dead-zone
-		if (!_weathervane.is_active() || fabsf(_sticks.getPositionExpo()(3)) > FLT_EPSILON) {
+		if (!_weathervane.isActive() || fabsf(_sticks.getPositionExpo()(3)) > FLT_EPSILON) {
 			_stick_yaw.generateYawSetpoint(_yawspeed_setpoint, _land_heading,
 						       _sticks.getPositionExpo()(3) * math::radians(_param_mpc_man_y_max.get()), _yaw, _is_yaw_good_for_control, _deltatime);
 		}
@@ -446,7 +446,7 @@ bool FlightTaskAuto::_evaluateTriplets()
 	}
 
 	// activation/deactivation of weather vane is based on parameter WV_EN and setting of navigator (allow_weather_vane)
-	if (_weathervane.is_enabled_by_param() && !_sub_triplet_setpoint.get().current.disable_weather_vane) {
+	if (_weathervane.isEnabledByParam() && !_sub_triplet_setpoint.get().current.disable_weather_vane) {
 		_weathervane.activate();
 
 	} else {
@@ -468,7 +468,7 @@ bool FlightTaskAuto::_evaluateTriplets()
 				_triplet_next_wp,
 				_sub_triplet_setpoint.get().next.yaw,
 				_sub_triplet_setpoint.get().next.yawspeed_valid ? _sub_triplet_setpoint.get().next.yawspeed : (float)NAN,
-				_weathervane.is_active(), _sub_triplet_setpoint.get().current.type);
+				_weathervane.isActive(), _sub_triplet_setpoint.get().current.type);
 		_obstacle_avoidance.checkAvoidanceProgress(
 			_position, _triplet_prev_wp, _target_acceptance_radius, Vector2f(_closest_pt));
 	}
@@ -476,7 +476,7 @@ bool FlightTaskAuto::_evaluateTriplets()
 	// set heading
 	_weathervane.update();
 
-	if (_weathervane.is_active()) {
+	if (_weathervane.isActive()) {
 		_yaw_setpoint = NAN;
 		// use the yawrate setpoint from WV only if not moving lateral (velocity setpoint below half of _param_mpc_xy_cruise)
 		// otherwise, keep heading constant (as output from WV is not according to wind in this case)
@@ -486,7 +486,7 @@ bool FlightTaskAuto::_evaluateTriplets()
 			_yawspeed_setpoint = 0.0f;
 
 		} else {
-			_yawspeed_setpoint = _weathervane.get_weathervane_yawrate();
+			_yawspeed_setpoint = _weathervane.getWeathervaneYawrate();
 		}
 
 

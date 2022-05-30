@@ -76,13 +76,13 @@ bool FlightTaskManualAcceleration::update()
 	// check if an external yaw handler is active and if yes, let it update the yaw setpoints
 	_weathervane.update();
 
-	if (_weathervane.is_active()) {
+	if (_weathervane.isActive()) {
 		_yaw_setpoint = NAN;
 
 		// only enable the weathervane to change the yawrate when position lock is active (and thus the pos. sp. are NAN)
 		if (PX4_ISFINITE(_position_setpoint(0)) && PX4_ISFINITE(_position_setpoint(1))) {
 			// vehicle is steady
-			_yawspeed_setpoint += _weathervane.get_weathervane_yawrate();
+			_yawspeed_setpoint += _weathervane.getWeathervaneYawrate();
 		}
 	}
 
