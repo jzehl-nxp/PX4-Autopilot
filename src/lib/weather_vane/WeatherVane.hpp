@@ -44,11 +44,16 @@
 
 #include <px4_platform_common/module_params.h>
 #include <matrix/matrix/math.hpp>
+#include <uORB/Subscription.hpp>
+#include <uORB/topics/vehicle_attitude_setpoint.h>
+#include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/vehicle_control_mode.h>
+#include <uORB/topics/vehicle_status.h>
 
 class WeatherVane : public ModuleParams
 {
 public:
-	WeatherVane();
+	WeatherVane(ModuleParams *parent);
 
 	~WeatherVane() = default;
 
@@ -58,16 +63,18 @@ public:
 
 	bool is_active() {return _is_active;}
 
-	bool weathervane_enabled() { return _param_wv_en.get(); }
+	bool is_enabled_by_param() { return _param_wv_en.get(); }
 
-	void update(const matrix::Vector3f &dcm_z_sp_prev, float yaw);
+	void update();
 
 	float get_weathervane_yawrate();
 
-	void update_parameters() { ModuleParams::updateParams(); }
-
 private:
-	matrix::Vector3f _dcm_z_sp_prev; ///< previous attitude setpoint body z axis
+	uORB::Subscription _vehicle_attitude_setpoint_sub{ORB_ID(vehicle_attitude_setpoint)};
+	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
+	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
+	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
+
 	float _yaw = 0.0f; ///< current yaw angle
 
 	bool _is_active = true;
