@@ -81,6 +81,9 @@ PARAM_DEFINE_FLOAT(FLW_TGT_DST, 8.0f);
  * course (direction of motion) and the angle increases in clockwise direction,
  * meaning Right-side would be 90.0 degrees while Left-side is -90.0 degrees
  *
+ * Note: When the user force sets the angle out of the min/max range, it will be
+ * wrapped (e.g. 480 -> 120) in the range to gracefully handle the out of range.
+ *
  * @min -180.0
  * @max 180.0
  * @group Follow target

@@ -80,8 +80,7 @@ bool FlightTaskAutoFollowTarget::activate(const trajectory_setpoint_s &last_setp
 	_yawspeed_setpoint = NAN;
 
 	// Update the internally tracked Follow Target characteristics
-	_follow_angle_rad = math::radians(constrain(_param_flw_tgt_fa.get(), FOLLOW_ANGLE_MINIMUM_DEG,
-					  FOLLOW_ANGLE_MAXIMUM_DEG));
+	_follow_angle_rad = matrix::wrap_pi(math::radians(_param_flw_tgt_fa.get()));
 	_follow_distance = _param_flw_tgt_dst.get();
 	_follow_height = _param_flw_tgt_ht.get();
 
@@ -119,8 +118,7 @@ void FlightTaskAutoFollowTarget::updateParams()
 	}
 
 	if (!matrix::isEqualF(follow_angle_prev, _param_flw_tgt_fa.get())) {
-		_follow_angle_rad = math::radians(constrain(_param_flw_tgt_fa.get(), FOLLOW_ANGLE_MINIMUM_DEG,
-						  FOLLOW_ANGLE_MAXIMUM_DEG));
+		_follow_angle_rad = matrix::wrap_pi(math::radians(_param_flw_tgt_fa.get()));
 	}
 }
 

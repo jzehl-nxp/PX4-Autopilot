@@ -223,7 +223,6 @@ void AutopilotTesterFollowMe::straight_line_test(const bool stream_velocity)
 		std::array<float, 3> target_pos_ned_ground_truth = target_simulator.get_position_ground_truth_ned();
 		std::array<float, 3> position_ned = get_current_position_ned();
 		const float distance_to_target = norm(diff(target_pos_ned_ground_truth, position_ned));
-		printf("Target GPS Sample Idx: %d, Distance to target: %f\n", location_update_idx, distance_to_target);
 
 		// poor-man's state machine
 		if (location_update_idx < 5) {
@@ -396,16 +395,16 @@ void AutopilotTesterFollowMe::rc_adjustment_test()
 	config.follow_angle_deg = follow_angle_setting;
 	CHECK(FollowMe::Result::Success == _follow_me->set_config(config));
 
-	// Make sure the target is stationary and giving a clean data, to do a controlled test
-	// on RC adjustments
-	std::array<double, 3> target_global_coordinate = target_simulator.get_position_global_ground_truth();
+	// [deg] Get a single sample of target's GPS coordinate
+	const std::array<double, 3> target_global_coordinate = target_simulator.get_position_global_ground_truth();
 
-	FollowMe::TargetLocation target_location{};
+	// Set TargetLocation as the sample to simulate a stationary target for a controlled RC adjustment test
+	const FollowMe::TargetLocation target_location{};
 	target_location.latitude_deg = target_global_coordinate[0];
 	target_location.longitude_deg = target_global_coordinate[1];
 	target_location.absolute_altitude_m = target_global_coordinate[2];
 
-	// Assume target position is where the drone is at in the beginning
+	// [m] Save the target's location in Local NED (in meters), assuming it is where drone is at in the beginning
 	const std::array<float, 3> target_pos = get_current_position_ned();
 
 	// Start Follow-me

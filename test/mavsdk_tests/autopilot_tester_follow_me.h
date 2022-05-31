@@ -40,7 +40,7 @@
 #include <mavsdk/plugins/follow_me/follow_me.h>
 
 
-// Simulated a target moving on a straight line in X+ direction
+// Simulate a target moving on a straight line in X+ direction
 class FollowTargetSimulator
 {
 public:

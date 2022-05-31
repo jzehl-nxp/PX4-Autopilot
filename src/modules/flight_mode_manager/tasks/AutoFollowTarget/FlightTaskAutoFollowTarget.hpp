@@ -77,12 +77,6 @@ static constexpr float ALT_ACCEPTANCE_THRESHOLD = 3.0f;
 // [m] Minimum distance between drone and target for the drone to do any yaw control.
 static constexpr float MINIMUM_DISTANCE_TO_TARGET_FOR_YAW_CONTROL = 1.0f;
 
-// [deg] Minimum Follow angle that can be set by the user through the FLW_TGT_FA parameter
-static constexpr float FOLLOW_ANGLE_MINIMUM_DEG = -180.0f;
-
-// [deg] Maximum Follow angle that can be set by the user through the FLW_TGT_FA parameter
-static constexpr float FOLLOW_ANGLE_MAXIMUM_DEG = 180.0f;
-
 // << Target Position Velocity Estimator related constants >>
 
 // [rad/s] Second Order reference model filter natural frequency
